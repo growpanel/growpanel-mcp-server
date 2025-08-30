@@ -1,0 +1,1 @@
+# growpanel-mcp-server
