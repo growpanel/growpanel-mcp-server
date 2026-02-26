@@ -42,7 +42,7 @@ export const tools: ToolDef[] = [
     // ─── Analytics (core) ────────────────────────────────────────────
     {
         name: 'get_report',
-        description: `Fetch any GrowPanel analytics report by name. This is the primary tool for subscription analytics.\n\nKnown reports: ${KNOWN_REPORTS.join(', ')}\n\nAny report name is accepted — new API reports work automatically without MCP server updates.`,
+        description: `Fetch any GrowPanel analytics report by name. This is the primary tool for subscription analytics.\n\nKnown reports: ${KNOWN_REPORTS.join(', ')}\n\nAny report name is accepted — new API reports work automatically without MCP server updates.\n\nAll monetary values are in the account's base currency. The response includes a \`currency\` field indicating which currency is used (e.g., "usd", "eur", "dkk").`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -54,7 +54,7 @@ export const tools: ToolDef[] = [
         handler: async (params) => {
             const { name, ...filters } = params;
             const data = await callApi({ method: 'GET', path: `/reports/${name}`, params: filterParams(filters) });
-            return unwrap(data);
+            return data;
         },
     },
 
