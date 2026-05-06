@@ -12,7 +12,7 @@ interface ToolDef {
 }
 
 const KNOWN_REPORTS = [
-    'mrr', 'mrr-table', 'mrr-table-subtypes', 'summary', 'cmrr-summary',
+    'mrr', 'mrr-growth', 'mrr-growth-table', 'mrr-table', 'mrr-table-subtypes', 'summary', 'cmrr-summary',
     'movement-table', 'map', 'cohort',
     'leads', 'leads-table', 'leads-days', 'leads-summary',
     'transactions', 'transactions-table', 'transactions-detail', 'transactions-summary',
@@ -36,6 +36,7 @@ const REPORT_FILTER_PROPERTIES = {
     country: { type: 'string', description: 'Filter by ISO country code' },
     data_source: { type: 'string', description: 'Filter by data source ID' },
     breakdown: { type: 'string', description: 'Group results by: plan, currency, billing_freq, etc.' },
+    category: { type: 'string', description: 'Filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn. Used by mrr-movements and mrr-growth reports.' },
 };
 
 export const tools: ToolDef[] = [
@@ -186,19 +187,20 @@ export const tools: ToolDef[] = [
     // ─── Exports ─────────────────────────────────────────────────────
     {
         name: 'export_csv',
-        description: 'Export data as CSV. Available exports: customers (all customers with details) and mrr-movements (all MRR changes).',
+        description: 'Export data as CSV. Available exports: customers (all customers with details), mrr-movements (all MRR changes), mrr-growth (per-month-per-day cumulative MRR change in long format, ideal for cohort/pacing analysis).',
         inputSchema: {
             type: 'object',
             properties: {
-                type: { type: 'string', enum: ['customers', 'mrr-movements'], description: 'Export type' },
+                type: { type: 'string', enum: ['customers', 'mrr-movements', 'mrr-growth'], description: 'Export type' },
                 date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format' },
+                category: { type: 'string', description: 'For mrr-growth: filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn' },
             },
             required: ['type'],
         },
         handler: async (params) => {
-            const { type, date } = params;
-            const filename = type === 'mrr-movements' ? 'mrr-movements.csv' : 'customers.csv';
-            const data = await callApi({ method: 'GET', path: `/exports/${filename}`, params: filterParams({ date }) });
+            const { type, date, category } = params;
+            const filename = `${type}.csv`;
+            const data = await callApi({ method: 'GET', path: `/exports/${filename}`, params: filterParams({ date, category }) });
             return data;
         },
     },

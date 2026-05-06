@@ -8,11 +8,12 @@ import {
     ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { tools } from './tools.js';
+import { scaleMoneyFields } from './money_scale.js';
 
 const server = new Server(
     {
         name: 'GrowPanel MCP Server',
-        version: '2.0.0',
+        version: '2.1.0',
     },
     {
         capabilities: {
@@ -42,7 +43,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     try {
-        const result = await tool.handler(args || {});
+        const raw = await tool.handler(args || {});
+
+        // Pre-scale monetary fields (cents → display units) so the AI client
+        // doesn't quote raw cents as if they were dollars. CSV/text returns
+        // pass through untouched.
+        const result = typeof raw === 'string' ? raw : scaleMoneyFields(raw);
 
         const text = typeof result === 'string'
             ? result
