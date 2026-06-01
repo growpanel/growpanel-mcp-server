@@ -14,6 +14,9 @@ interface ToolDef {
 const KNOWN_REPORTS = [
     'mrr', 'mrr-growth', 'mrr-growth-table', 'mrr-table', 'mrr-table-subtypes', 'summary', 'cmrr-summary',
     'movement-table', 'map', 'cohort',
+    // retention is the source of truth for churn, retention, NRR, GRR, LTV, customer_lifetime.
+    // The mrr report no longer exposes those fields — query retention instead.
+    'retention',
     'leads', 'leads-table', 'leads-days', 'leads-summary',
     'transactions', 'transactions-table', 'transactions-detail', 'transactions-summary',
     'invoices-detail',
