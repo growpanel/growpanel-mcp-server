@@ -11,14 +11,22 @@ on:
       - 'bin/**'
   workflow_dispatch:
 
+# Prevent overlapping runs from racing each other on the auto-bump commit.
+concurrency:
+  group: publish-mcp-server
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Need a writable checkout so the auto-bump commit can push back.
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -34,21 +42,26 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Skip if version unchanged
-        id: version_check
+      - name: Auto-bump patch if version already published
+        id: bump
         run: |
           LOCAL=$(node -p "require('./package.json').version")
           PUBLISHED=$(npm view growpanel-mcp-server version 2>/dev/null || echo "0.0.0")
           echo "Local: $LOCAL — Published: $PUBLISHED"
           if [ "$LOCAL" = "$PUBLISHED" ]; then
-            echo "Version $LOCAL already published — skipping."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Local matches published — auto-bumping patch."
+            npm version --no-git-tag-version patch
+            NEW=$(node -p "require('./package.json').version")
+            echo "Bumped to $NEW"
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            # Skip-ci tag avoids re-triggering this workflow on the bump push.
+            git add package.json package-lock.json
+            git commit -m "chore: bump to v${NEW} [skip ci]"
+            git push
           fi
 
       - name: Publish
-        if: steps.version_check.outputs.skip == 'false'
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
