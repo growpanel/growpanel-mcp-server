@@ -7,7 +7,7 @@ MCP server for [GrowPanel](https://growpanel.io) subscription analytics. Connect
 ## Installation
 
 ```bash
-npm install -g growpanel-mcp-server
+npm install -g @growpanel/mcp-server
 ```
 
 ## Configuration
@@ -111,7 +111,7 @@ Once connected, you can ask your AI assistant:
 
 ## Self-Updating Architecture
 
-The MCP server uses the same dynamic architecture as the [GrowPanel CLI](https://www.npmjs.com/package/growpanel-cli):
+The MCP server uses the same dynamic architecture as the [GrowPanel CLI](https://www.npmjs.com/package/@growpanel/cli):
 
 - **`get_report`** accepts any report name and passes it through to `/reports/<name>`. New reports work automatically.
 - **`api_request`** can call any API endpoint. New API features work on day one.
