@@ -21,6 +21,7 @@ const KNOWN_REPORTS = [
     'transactions', 'transactions-table', 'transactions-detail', 'transactions-summary',
     'invoices-detail',
     'churn-scheduled', 'churn-scheduled-movements', 'churn-scheduled-summary',
+    'cancellation-timing', 'cancellation-timing-detail',
     'customer-concentration',
     'cashflow-failed-payments', 'cashflow-failed-payments-summary',
     'cashflow-failed-payments-detail', 'cashflow-failed-payments-table',
@@ -38,7 +39,8 @@ const REPORT_FILTER_PROPERTIES = {
     plan: { type: 'string', description: 'Filter by plan group ID' },
     country: { type: 'string', description: 'Filter by ISO country code' },
     data_source: { type: 'string', description: 'Filter by data source ID' },
-    breakdown: { type: 'string', description: 'Group results by a dimension. Supported on mrr, retention, cohort, leads, leads-table, transactions (cashflow), transactions-table, cashflow-refunds, churn-reasons, churn-scheduled. Common values: plan, currency, payment_method, country, region, market, age, data_source, billing_freq, pricing_model. Custom variables: custom_<key>.' },
+    billing_freq: { type: 'string', description: "Filter by billing frequency. Values: month | year | quarter | week | day (the adjective forms monthly/yearly/annual are auto-normalised). Space-separate for OR (e.g. 'month year')." },
+    breakdown: { type: 'string', description: 'Group results by a dimension. Supported on mrr, retention, cohort, leads, leads-table, transactions (cashflow), transactions-table, cashflow-refunds, churn-reasons, churn-scheduled, cancellation-timing. Common values: plan, currency, payment_method, country, region, market, age, data_source, billing_freq, pricing_model. Custom variables: custom_<key>. Note dimension values must match the stored form (e.g. billing_freq=month, not "monthly"); a value that matches nothing returns 0 rows.' },
     category: { type: 'string', description: 'Filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn. Used by mrr-movements and mrr-growth reports.' },
 };
 
