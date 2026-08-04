@@ -39,7 +39,7 @@ const REPORT_FILTER_PROPERTIES = {
     plan: { type: 'string', description: 'Filter by plan group ID' },
     country: { type: 'string', description: 'Filter by ISO country code' },
     data_source: { type: 'string', description: 'Filter by data source ID' },
-    billing_freq: { type: 'string', description: "Filter by billing frequency. Values: month | year | quarter | week | day (the adjective forms monthly/yearly/annual are auto-normalised). Space-separate for OR (e.g. 'month year')." },
+    billing_freq: { type: 'string', description: "Filter by billing frequency. Values: month | year | quarter | week | day (the adjective forms monthly/yearly/annual are auto-normalized). Space-separate for OR (e.g. 'month year')." },
     type: { type: 'string', enum: ['expansion', 'contraction', 'churn'], description: "For the 'mrr-subtypes' report: which movement type to decompose into its underlying subtypes (e.g. discount_change vs plan_change/add_on). Required for that report." },
     breakdown: { type: 'string', description: 'Group results by a dimension. Supported on mrr, retention, cohort, leads, leads-table, transactions (cashflow), transactions-table, cashflow-refunds, churn-reasons, churn-scheduled, cancellation-timing. Common values: plan, currency, payment_method, country, region, market, age, data_source, billing_freq, pricing_model. Custom variables: custom_<key>. Note dimension values must match the stored form (e.g. billing_freq=month, not "monthly"); a value that matches nothing returns 0 rows.' },
     category: { type: 'string', description: 'Filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn. Used by mrr-movements and mrr-growth reports.' },
