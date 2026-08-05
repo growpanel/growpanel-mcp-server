@@ -49,7 +49,7 @@ export const tools: ToolDef[] = [
     // ─── Analytics (core) ────────────────────────────────────────────
     {
         name: 'get_report',
-        description: `Fetch any GrowPanel analytics report by name. This is the primary tool for subscription analytics.\n\nKnown reports: ${KNOWN_REPORTS.join(', ')}\n\nAny report name is accepted — new API reports work automatically without MCP server updates.\n\nAll monetary values are in the account's base currency. The response includes a \`currency\` field indicating which currency is used (e.g., "usd", "eur", "dkk").`,
+        description: `Fetch any GrowPanel analytics report by name. This is the primary tool for subscription analytics.\n\nKnown reports: ${KNOWN_REPORTS.join(', ')}\n\nPicking the right report:\n- CHURN & RETENTION (logo churn, MRR churn, NRR, GRR, LTV) — use "retention" (per-period churned_customers, churned_mrr, retention rates). Do NOT derive churn from "mrr" or "movement-table".\n- Cohort retention by signup month — use "cohort".\n- MRR movement totals over time — use "mrr".\n- "movement-table" is a per-customer DRILL-DOWN: it returns [] unless you pass selected-type (new|expansion|contraction|churn|reactivation) AND selected-date (a period end like 2026-01-31). Prefer the aggregate reports above.\n\nAggregate reports are small; row-level reports (movement-table, *-detail, *-table, invoices-detail) can be large — always pass a 'date' range.\n\nAny report name is accepted — new API reports work automatically without MCP server updates.\n\nAll monetary values are in the account's base currency. The response includes a \`currency\` field indicating which currency is used (e.g., "usd", "eur", "dkk").`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -68,17 +68,21 @@ export const tools: ToolDef[] = [
     // ─── Customers ───────────────────────────────────────────────────
     {
         name: 'list_customers',
-        description: 'List all customers with their subscription details and MRR. Supports pagination.',
+        description: 'List customers with subscription details and MRR. Returns { count, list }. PAGINATED — a page holds at most 100 customers (accounts can have tens of thousands, too much for one response). To walk the whole base, increase offset by the page size until count comes back smaller than the limit. Standard filters (status, plan, country, currency, etc.) also work.',
         inputSchema: {
             type: 'object',
             properties: {
                 date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format' },
-                limit: { type: 'string', description: 'Maximum number of results (default: 100)' },
-                offset: { type: 'string', description: 'Pagination offset' },
+                limit: { type: 'string', description: 'Rows per page. Default 100, max 100.' },
+                offset: { type: 'string', description: 'Pagination offset (0, 100, 200, …)' },
             },
         },
         handler: async (params) => {
-            const data = await callApi({ method: 'GET', path: '/customers', params: filterParams(params) });
+            // Clamp the page size — an AI asking for "all customers" must not pull a multi-MB blob
+            // the client can't read. Callers page with offset instead.
+            const requested = parseInt((params as Record<string, string>).limit);
+            const limit = Number.isFinite(requested) && requested > 0 ? Math.min(requested, 100) : 100;
+            const data = await callApi({ method: 'GET', path: '/customers', params: filterParams({ ...params, limit: String(limit) }) });
             return unwrap(data);
         },
     },
@@ -193,7 +197,7 @@ export const tools: ToolDef[] = [
     // ─── Exports ─────────────────────────────────────────────────────
     {
         name: 'export_csv',
-        description: 'Export data as CSV. Available exports: customers (all customers with details), mrr-movements (all MRR changes), mrr-growth (per-month-per-day cumulative MRR change in long format, ideal for cohort/pacing analysis).',
+        description: 'Export data as CSV. Available exports: customers (all customers with details), mrr-movements (all MRR changes), mrr-growth (per-month-per-day cumulative MRR change in long format, ideal for cohort/pacing analysis). NOTE: for large accounts a full export can be very large — pass a \'date\' range to keep mrr-movements/mrr-growth small. For paging customers use list_customers (offset); for analysis prefer an aggregate report (retention, mrr, cohort).',
         inputSchema: {
             type: 'object',
             properties: {
