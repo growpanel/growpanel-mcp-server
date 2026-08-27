@@ -31,7 +31,27 @@ const KNOWN_REPORTS = [
     'custom-variables',
 ];
 
+// Absolute date-window filters, shared by get_report and list_customers. Every one takes an
+// inclusive range: "from..to", "from.." (on or after), "..to" (on or before), or a single date.
+// These are the only way to pin a fixed calendar cohort — the `age` filter is relative to today.
+// Keep in sync with growpanel-mcp/src/tools.js (the hosted Streamable-HTTP transport).
+const dateRangeFilter = (what: string, extra = '') => ({
+    type: 'string',
+    description: `Filter by when the ${what}. Inclusive range: "20260101..20260630", "20260101.." (on or after), ` +
+        `"..20260630" (on or before), or a single date. Accepts yyyy-MM-dd or yyyyMMdd. ` +
+        `Use "*" for "has any value", "~" for "has none".${extra}`,
+});
+
+const DATE_RANGE_FILTER_PROPERTIES = {
+    created_date: dateRangeFilter('lead was created'),
+    paid_started: dateRangeFilter('customer started paying',
+        ' Prefer this over created_date for revenue questions ("how is the 2026 intake retaining?") — it is the date money started, and it excludes leads/trials that never converted.'),
+    cancel_date: dateRangeFilter('subscription was cancelled'),
+    trial_end_date: dateRangeFilter('trial ends'),
+};
+
 const REPORT_FILTER_PROPERTIES = {
+    ...DATE_RANGE_FILTER_PROPERTIES,
     date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format (e.g., 20240101-20241231)' },
     interval: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'Aggregation interval (default: month)' },
     currency: { type: 'string', description: 'Filter by currency code (e.g., usd, eur)' },
@@ -39,6 +59,7 @@ const REPORT_FILTER_PROPERTIES = {
     plan: { type: 'string', description: 'Filter by plan group ID' },
     country: { type: 'string', description: 'Filter by ISO country code' },
     data_source: { type: 'string', description: 'Filter by data source ID' },
+    segment: { type: 'string', description: 'Filter by saved segment ID (a filter combination saved in the app under Filter > Segments). The report is computed only over customers matching the segment. List segments via manage_data resource=segments.' },
     billing_freq: { type: 'string', description: "Filter by billing frequency. Values: month | year | quarter | week | day (the adjective forms monthly/yearly/annual are auto-normalized). Space-separate for OR (e.g. 'month year')." },
     type: { type: 'string', enum: ['expansion', 'contraction', 'churn'], description: "For the 'mrr-subtypes' report: which movement type to decompose into its underlying subtypes (e.g. discount_change vs plan_change/add_on). Required for that report." },
     breakdown: { type: 'string', description: 'Group results by a dimension. Supported on mrr, retention, cohort, leads, leads-table, transactions (cashflow), transactions-table, cashflow-refunds, churn-reasons, churn-scheduled, cancellation-timing. Common values: plan, currency, payment_method, country, region, market, age, data_source, billing_freq, pricing_model. Custom variables: custom_<key>. Note dimension values must match the stored form (e.g. billing_freq=month, not "monthly"); a value that matches nothing returns 0 rows.' },
@@ -68,13 +89,15 @@ export const tools: ToolDef[] = [
     // ─── Customers ───────────────────────────────────────────────────
     {
         name: 'list_customers',
-        description: 'List customers with subscription details and MRR. Returns { count, list }. PAGINATED — a page holds at most 100 customers (accounts can have tens of thousands, too much for one response). To walk the whole base, increase offset by the page size until count comes back smaller than the limit. Standard filters (status, plan, country, currency, etc.) also work.',
+        description: 'List customers with subscription details and MRR. Returns { count, list }. PAGINATED — a page holds at most 100 customers (accounts can have tens of thousands, too much for one response). To walk the whole base, increase offset by the page size until count comes back smaller than the limit. Standard filters (status, plan, country, currency, etc.) also work. Narrow with the date filters below before paging — a cohort question like "customers who started paying in H1 2026" is a few pages, not the whole base.',
         inputSchema: {
             type: 'object',
             properties: {
                 date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format' },
                 limit: { type: 'string', description: 'Rows per page. Default 100, max 100.' },
                 offset: { type: 'string', description: 'Pagination offset (0, 100, 200, …)' },
+                status: { type: 'string', description: "Customer status filter (active, canceled, trialing, …). Pass 'all' to include every status — the default is active only." },
+                ...DATE_RANGE_FILTER_PROPERTIES,
             },
         },
         handler: async (params) => {
@@ -134,11 +157,11 @@ export const tools: ToolDef[] = [
     // ─── Data CRUD ───────────────────────────────────────────────────
     {
         name: 'manage_data',
-        description: `Generic CRUD operations on data resources.\n\nResources: customers, plans, plan-groups, data-sources, invoices\n\nStandard actions: list, get, create, update, delete\nData source actions: reset, connect, full-import, progress, abort\nPlan group actions: delete-multiple, ai-suggest, merge`,
+        description: `Generic CRUD operations on data resources.\n\nResources: customers, plans, plan-groups, data-sources, invoices, segments\n\nStandard actions: list, get, create, update, delete\nData source actions: reset, connect, full-import, progress, abort\nPlan group actions: delete-multiple, ai-suggest, merge`,
         inputSchema: {
             type: 'object',
             properties: {
-                resource: { type: 'string', enum: ['customers', 'plans', 'plan-groups', 'data-sources', 'invoices'], description: 'Resource type' },
+                resource: { type: 'string', enum: ['customers', 'plans', 'plan-groups', 'data-sources', 'invoices', 'segments'], description: 'Resource type' },
                 action: {
                     type: 'string',
                     enum: ['list', 'get', 'create', 'update', 'delete', 'reset', 'connect', 'full-import', 'progress', 'abort', 'delete-multiple', 'ai-suggest', 'merge'],
