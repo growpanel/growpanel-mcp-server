@@ -47,6 +47,7 @@ const DATE_RANGE_FILTER_PROPERTIES = {
     paid_started: dateRangeFilter('customer started paying',
         ' Prefer this over created_date for revenue questions ("how is the 2026 intake retaining?") — it is the date money started, and it excludes leads/trials that never converted.'),
     cancel_date: dateRangeFilter('subscription was cancelled'),
+    renewal_date: dateRangeFilter('subscription next renews (next billing date)'),
     trial_end_date: dateRangeFilter('trial ends'),
 };
 
