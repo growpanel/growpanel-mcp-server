@@ -51,8 +51,25 @@ const DATE_RANGE_FILTER_PROPERTIES = {
     trial_end_date: dateRangeFilter('trial ends'),
 };
 
+// Customer value filters, shared by get_report and list_customers. Amounts are WHOLE units (dollars,
+// euros, yen — never cents) of the account's default currency, converted at the latest exchange rates.
+// Format: "1000" is, "1000.." above, "..1000" below, "500..1000" between (inclusive).
+const amountFilter = (what: string) => ({
+    type: 'string',
+    description: `Filter by the customer's ${what}, in whole units of the account's default currency (not cents). ` +
+        `"1000" = is 1000, "1000.." = above, "..1000" = below, "500..1000" = between (inclusive).`,
+});
+
+const CUSTOMER_VALUE_FILTER_PROPERTIES = {
+    mrr: amountFilter('current MRR'),
+    last_active_mrr: amountFilter('MRR the last time it was above zero (current MRR while paying, the MRR just before churn after), so churned customers can be found by what they paid'),
+    total_paid: amountFilter('total paid so far: successful payments including one-time ones, after discounts, refunds not subtracted'),
+    payments: { type: 'string', description: 'Filter by the number of successful payments the customer has made (a plain count). "3" = exactly 3, "3.." = more than 3, "..3" = fewer than 3, "2..5" = between (inclusive).' },
+};
+
 const REPORT_FILTER_PROPERTIES = {
     ...DATE_RANGE_FILTER_PROPERTIES,
+    ...CUSTOMER_VALUE_FILTER_PROPERTIES,
     date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format (e.g., 20240101-20241231)' },
     interval: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'], description: 'Aggregation interval (default: month)' },
     currency: { type: 'string', description: 'Filter by currency code (e.g., usd, eur)' },
@@ -99,6 +116,7 @@ export const tools: ToolDef[] = [
                 offset: { type: 'string', description: 'Pagination offset (0, 100, 200, …)' },
                 status: { type: 'string', description: "Customer status filter (active, canceled, trialing, …). Pass 'all' to include every status — the default is active only." },
                 ...DATE_RANGE_FILTER_PROPERTIES,
+                ...CUSTOMER_VALUE_FILTER_PROPERTIES,
             },
         },
         handler: async (params) => {
