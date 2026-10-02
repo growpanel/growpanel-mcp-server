@@ -22,7 +22,7 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
 
 const MONEY_EXPLICIT = new Set([
     'new', 'expansion', 'contraction', 'churn', 'reactivation', 'paused', 'resumed',
-    'paused_mrr', 'paused_mrr_current', 'paused_mrr_30_days_ago', 'paused_mrr_change_30',
+    'paused_mrr_current', 'due_back_30_mrr', 'due_back_30_base_currency',
     'mrr_before_pause', 'mrr_before_pause_base_currency',
     'mrr_diff', 'net_mrr_diff', 'fx_adjustment', 'total_mrr', 'total_arr',
     'arpa', 'asp', 'ltv',
