@@ -23,6 +23,8 @@ const KNOWN_REPORTS = [
     'churn-scheduled', 'churn-scheduled-movements', 'churn-scheduled-summary',
     'cancellation-timing', 'cancellation-timing-detail',
     'customer-concentration',
+    // Paused subscriptions now (paused MRR, paused customers, expected back). Pauses aren't churn.
+    'paused',
     'cashflow-failed-payments', 'cashflow-failed-payments-summary',
     'cashflow-failed-payments-detail', 'cashflow-failed-payments-table',
     'cashflow-refunds', 'cashflow-refunds-table', 'cashflow-refunds-detail',
@@ -81,14 +83,14 @@ const REPORT_FILTER_PROPERTIES = {
     billing_freq: { type: 'string', description: "Filter by billing frequency. Values: month | year | quarter | week | day (the adjective forms monthly/yearly/annual are auto-normalized). Space-separate for OR (e.g. 'month year')." },
     type: { type: 'string', enum: ['expansion', 'contraction', 'churn'], description: "For the 'mrr-subtypes' report: which movement type to decompose into its underlying subtypes (e.g. discount_change vs plan_change/add_on). Required for that report." },
     breakdown: { type: 'string', description: 'Group results by a dimension. Supported on mrr, retention, cohort, leads, leads-table, transactions (cashflow), transactions-table, cashflow-refunds, churn-reasons, churn-scheduled, cancellation-timing. Common values: plan, currency, payment_method, country, region, market, age, data_source, billing_freq, pricing_model. Custom variables: custom_<key>. Note dimension values must match the stored form (e.g. billing_freq=month, not "monthly"); a value that matches nothing returns 0 rows.' },
-    category: { type: 'string', description: 'Filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn. Used by mrr-movements and mrr-growth reports.' },
+    category: { type: 'string', description: 'Filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn, paused, resumed. Used by mrr-movements and mrr-growth reports.' },
 };
 
 export const tools: ToolDef[] = [
     // ─── Analytics (core) ────────────────────────────────────────────
     {
         name: 'get_report',
-        description: `Fetch any GrowPanel analytics report by name. This is the primary tool for subscription analytics.\n\nKnown reports: ${KNOWN_REPORTS.join(', ')}\n\nPicking the right report:\n- CHURN & RETENTION (logo churn, MRR churn, NRR, GRR, LTV) — use "retention" (per-period churned_customers, churned_mrr, retention rates). Do NOT derive churn from "mrr" or "movement-table".\n- Cohort retention by signup month — use "cohort".\n- MRR movement totals over time — use "mrr".\n- "movement-table" is a per-customer DRILL-DOWN: it returns [] unless you pass selected-type (new|expansion|contraction|churn|reactivation) AND selected-date (a period end like 2026-01-31). Prefer the aggregate reports above.\n\nAggregate reports are small; row-level reports (movement-table, *-detail, *-table, invoices-detail) can be large — always pass a 'date' range.\n\nAny report name is accepted — new API reports work automatically without MCP server updates.\n\nAll monetary values are in the account's base currency. The response includes a \`currency\` field indicating which currency is used (e.g., "usd", "eur", "dkk").`,
+        description: `Fetch any GrowPanel analytics report by name. This is the primary tool for subscription analytics.\n\nKnown reports: ${KNOWN_REPORTS.join(', ')}\n\nPicking the right report:\n- CHURN & RETENTION (logo churn, MRR churn, NRR, GRR, LTV) — use "retention" (per-period churned_customers, churned_mrr, retention rates). Do NOT derive churn from "mrr" or "movement-table".\n- Cohort retention by signup month — use "cohort".\n- MRR movement totals over time — use "mrr" (includes paused / resumed MRR and paused_mrr at period end; pauses are NOT churn and are left out of every churn and retention metric). Who is paused right now — use "paused".\n- "movement-table" is a per-customer DRILL-DOWN: it returns [] unless you pass selected-type (new|expansion|contraction|churn|reactivation|paused|resumed) AND selected-date (a period end like 2026-01-31). Prefer the aggregate reports above.\n\nAggregate reports are small; row-level reports (movement-table, *-detail, *-table, invoices-detail) can be large — always pass a 'date' range.\n\nAny report name is accepted — new API reports work automatically without MCP server updates.\n\nAll monetary values are in the account's base currency. The response includes a \`currency\` field indicating which currency is used (e.g., "usd", "eur", "dkk").`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -114,7 +116,7 @@ export const tools: ToolDef[] = [
                 date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format' },
                 limit: { type: 'string', description: 'Rows per page. Default 100, max 100.' },
                 offset: { type: 'string', description: 'Pagination offset (0, 100, 200, …)' },
-                status: { type: 'string', description: "Customer status filter (active, canceled, trialing, …). Pass 'all' to include every status — the default is active only." },
+                status: { type: 'string', description: "Customer status filter (active, past_due, paused, canceled, trialing, trial_ended, lead). Pass 'all' to include every status — the default is active only." },
                 ...DATE_RANGE_FILTER_PROPERTIES,
                 ...CUSTOMER_VALUE_FILTER_PROPERTIES,
             },
@@ -245,7 +247,7 @@ export const tools: ToolDef[] = [
             properties: {
                 type: { type: 'string', enum: ['customers', 'mrr-movements', 'mrr-growth'], description: 'Export type' },
                 date: { type: 'string', description: 'Date range in yyyyMMdd-yyyyMMdd format' },
-                category: { type: 'string', description: 'For mrr-growth: filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn' },
+                category: { type: 'string', description: 'For mrr-growth: filter to specific movement types (space-separated): new, expansion, reactivation, contraction, churn, paused, resumed' },
             },
             required: ['type'],
         },
